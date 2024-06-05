@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Messages</title>
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome, <%= user.username %></h1>
+        
+        <div>
+            <label for="recipient">Send message to:</label>
+            <input type="text" id="recipient" placeholder="Enter recipient username" required />
+        </div>
+
+        <div class="message-area" id="message-area">
+            <% messages.forEach(message => { %>
+                <div class="message <%= message.senderId === user.username ? 'sent' : 'received' %>">
+                    <%= message.text %> - <%= message.senderId === user.username ? 'To ' + message.recipientId : 'From ' + message.senderId %>
+                </div>
+            <% }) %>
+        </div>
+        
+        <form class="message-form" id="message-form">
+            <input type="text" id="message-input" placeholder="Type a message..." required />
+            <button type="submit">Send</button>
+        </form>
+    </div>
+
+    <!-- Include Socket.IO client library -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+
+        const messageForm = document.getElementById('message-form');
+        const messageInput = document.getElementById('message-input');
+        const messageArea = document.getElementById('message-area');
+        const recipientInput = document.getElementById('recipient');
+        const senderId = '<%= user.username %>';
+
+        messageForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const messageText = messageInput.value.trim();
+            const recipientId = recipientInput.value.trim();
+            if (!messageText || !recipientId) return;
+
+            // Emit the chat message to the server
+            socket.emit('chat message', { text: messageText, senderId: senderId, recipientId: recipientId });
+
+            messageInput.value = '';
+            recipientInput.value = '';
+        });
+
+        // Listen for chat messages from the server
+        socket.on('chat message', (msg) => {
+            addMessage(msg.text, msg.senderId === senderId ? 'sent' : 'received', msg.senderId, msg.recipientId);
+        });
+
+        function addMessage(text, type, senderId, recipientId) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', type);
+            messageDiv.textContent = `${text} - ${type === 'sent' ? 'To ' + recipientId : 'From ' + senderId}`;
+            messageArea.appendChild(messageDiv);
+            messageArea.scrollTop = messageArea.scrollHeight;
+        }
+    </script>
+</body>
+</html>
